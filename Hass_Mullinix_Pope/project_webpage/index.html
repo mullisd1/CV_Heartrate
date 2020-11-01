@@ -69,7 +69,7 @@ One of the ways this issue has been approached in the past, specifically in the 
 <h3>Approach</h3>
 We plan to implement an image processing pipeline aimed towards extracting a subject's blood volume pulse (BVP) signal, and from that, their pulse rate with a technique called remote photoplethysmography (rPPG). The algorithms will be fed a video of a subject, and process each frame of the video to extract BVP data. There are many ways to achieve this goal; we will experiment with two approaches in parallel. The first rPPG algorithm we’ll implement involves statistical and spectral analysis, and the second one involves using deep learning methods. We hope that through implementing both, we'll be able to see which techniques are most effective and combine useful aspects from each.<br><br>
  
-The spectral method we will implement is inspired by Poe et al. [1] and consists of roughly 3 portions: ROI detection, preprocessing and extraction, and pulse rate calculation. The first of which is aimed to calculate the location of the subject's face to measure the BVP signal. We will use Haar Cascades to accomplish this. After their face is segmented, each RGB channel in the face-image will be averaged and normalized, resulting in one measurement per channel per frame in the video. These measurements will be gathered into three vectors and decomposed into three independent source signals using independent component analysis (ICA). These signals represent the fluctuations in color caused by variations in blood volume, and the one with the strongest power spectrum peak will be further analyzed. We will then filter the signal further in the time and frequency domains with moving-average and bandpass filters to calculate the interbeat intervals, and thus the heart rate.<br><br>
+The spectral method we will implement is inspired by Poe et al. [1] and consists of roughly 3 portions: ROI detection, preprocessing and extraction, and pulse rate calculation. The first of which is aimed to calculate the location of the subject's face to measure the BVP signal. We used the Open Computer Vision (opencv) library to utilize Haar Cascades to accomplish this. After their face is segmented, each RGB channel in the face-image will be averaged and normalized, resulting in one measurement per channel per frame in the video. These measurements will be gathered into three vectors and decomposed into three independent source signals using independent component analysis (ICA). These signals represent the fluctuations in color caused by variations in blood volume, and the one with the strongest power spectrum peak will be further analyzed. We  then filter the signal further in the time and frequency domains with a 5 point moving-average and then apply a hamming window bandpass filter with cuttoffs from 0.7 to 4 Hz. Since the sampling rate of the video varies from clip to clip, we used a cubic spline interpolation to fill out the values before applying the bandpass filter. The bandpass filter and the cubic spline interpolation were implemented with the help of the Scipy library. After filtering our data, we can calculate the interbeat intervals, and thus the heart rate.<br><br>
 
 The second approach we will take is to implement a convolutional neural network to estimate a PPG signal. The model will use the difference between two frames of face-images as input, and attempt to estimate the PPG signal at that instance. The face image will be generated through segmentation using Haar Cascades, just as in our first approach. While the precise architecture has not been determined, similar studies have used upwards of 10 convolutional layers and 5 pooling layers [2].
 
@@ -265,7 +265,16 @@ We will also perform an experiment with the attempt to measure the program's abi
 
 <!-- Results -->
 <h3>Qualitative results</h3>
-These will be filled in upon discovering them
+These results will be changed upon completion of the project, but show some of the progress made so far.<br>
+First, the facial detection via Haar Cascades can be seen here.<br>
+    <!-- Image from Haas -->
+<br><br>
+Then you can see the normalized data of the sepreate RBG Channels
+    <!-- Data from Haas -->
+    
+<br><br>
+Then this same data on the channel with the strongest power spectrum peak after being processed for interbeat interval calulation
+    <!-- run the above data through the filters and pray the output looks nice -->
 <br><br>
 
 <br><br>
