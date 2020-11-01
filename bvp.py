@@ -18,7 +18,7 @@ import glob
 import re
 
 
-class PulsePolice:
+class BVPExtractor:
     def __init__(self):
         self.face_cascade = cv2.CascadeClassifier(
             'haarcascade_frontalface_default.xml')
@@ -113,7 +113,7 @@ class PulsePolice:
         return ica.fit_transform(data)
 
 
-    def select_component(self, components, fs=60):
+    def select_component(self, components, fs):
         largest_psd_peak = -1e10
         best_component = None
         for i in range(components.shape[1]):
@@ -128,31 +128,38 @@ class PulsePolice:
 
 
     def get_BVP_signal(self, video_path, draw=False):
-        # Y, fs = self.sample_video(video_path, draw=draw)  # Get color samples from video
-        Y, fs = np.load('channel_data.npy'), 60.9708 
+        Y, fs = self.sample_video(video_path, draw=draw)  # Get color samples from video
+        # Y, fs = np.load('channel_data.npy'), 60.9708 
         
         detrended_data = self.detrend_traces(Y)
         cleaned_data = self.z_normalize(detrended_data)
         np.save('detrended_signals.npy', detrended_data)
         source_signals = self.ica_decomposition(cleaned_data)
         np.save('ica_signals.npy', source_signals)
-        bvp_signal = self.select_component(source_signals)
+        bvp_signal = self.select_component(source_signals, fs)
 
         return bvp_signal
 
 
 def plot_figures():
     # load in data
+    raw = np.load('channel_data.npy')
     detrended = np.load('detrended_signals.npy')
     ica = np.load('ica_signals.npy')
     bvp = np.load('bvp_signal.npy')
 
-    # Initial plotting adjustment
+    # Plot raw color data
+    rgb_fig, rgb_ax = plt.subplots(3,1, tight_layout={'pad': 1})
+    rgb_fig.set_size_inches(8, 6)
+    plt.subplots_adjust(wspace=None, hspace=1)
+
+    for c, name in enumerate(['Blue', 'Green', 'Red']):  # plot each component
+        rgb_ax[c].set_title(f"{name} channel")
+        rgb_ax[c].plot(raw[:,c])
 
     # Plot Detrended Data
     det_fig, det_ax = plt.subplots(3,1, tight_layout={'pad': 1})
     det_fig.set_size_inches(8, 6)
-    # det_fig.tight_layout()
     plt.subplots_adjust(wspace=None, hspace=1)
 
     for c, name in enumerate(['Blue', 'Green', 'Red']):  # plot each component
@@ -187,10 +194,12 @@ def main():
     args = parser.parse_args()
 
     if args.plot:
+        print("plotting figures...")
         plot_figures()
     else:
-        pp = PulsePolice()
-        bvp_signal = pp.get_BVP_signal('Sessions/1/', draw=args.draw)
+        print("Running algorithm...")
+        exctractor = BVPExtractor()
+        bvp_signal = exctractor.get_BVP_signal('Sessions/1/', draw=args.draw)
         np.save('bvp_signal.npy', bvp_signal)
 
 
