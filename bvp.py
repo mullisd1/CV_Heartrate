@@ -17,6 +17,8 @@ import matplotlib.pyplot as plt
 import glob
 import re
 
+# custom code
+from filteringData import movingAverageFilter, bandpassFilter
 
 class BVPExtractor:
     def __init__(self):
@@ -35,10 +37,7 @@ class BVPExtractor:
         fs = self.parse_for_fs(session_folder)
         nframes = int(video_stream.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        print(fs)
-
         Y = np.zeros((nframes,3))  # Holds the data for b,g,r channels
-
         for i in trange(nframes):
             good, frame = video_stream.read()       
             Y[i,:] = self.get_face_sample(frame, draw=draw)
@@ -141,6 +140,15 @@ class BVPExtractor:
         return bvp_signal
 
 
+    def find_heartrate(self, bvp_signal):
+        # 1st paragraph of sec 3c from Poe et al.
+        averaged = movingAverageFilter(bvp_signal,5)
+
+        bp = bandpassFilter(averaged)
+        plt.title("Bandpass filtered BVP signal")
+        plt.plot(bp)
+        plt.show()
+
 def plot_figures():
     # load in data
     raw = np.load('channel_data.npy')
@@ -191,14 +199,18 @@ def main():
     parser.add_argument('--source', '-s', action="store", type=str)
     parser.add_argument('--draw', '-d', action="store_true", default=False)
     parser.add_argument('--plot', '-p', help="Plot figures from code", action="store_true", default=False)
+    parser.add_argument('--hr', help="Calculate heart rate from bvp signal", action="store_true", default=False)
     args = parser.parse_args()
+
+    exctractor = BVPExtractor()
 
     if args.plot:
         print("plotting figures...")
         plot_figures()
+    elif args.hr:
+        hr = exctractor.find_heartrate(np.load('bvp_signal.npy'))
     else:
         print("Running algorithm...")
-        exctractor = BVPExtractor()
         bvp_signal = exctractor.get_BVP_signal('Sessions/1/', draw=args.draw)
         np.save('bvp_signal.npy', bvp_signal)
 
