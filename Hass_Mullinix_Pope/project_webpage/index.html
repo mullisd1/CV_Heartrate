@@ -20,6 +20,9 @@ color: #3366CC;
 .data {
 color: #FF9900;
 }
+table, th, td {
+  border: 1px solid black;
+}
 </style>
   
 <link href="css/bootstrap-responsive.min.css" rel="stylesheet">
@@ -70,10 +73,177 @@ The spectral method we will implement is inspired by Poe et al. [1] and consists
 
 The second approach we will take is to implement a convolutional neural network to estimate a PPG signal. The model will use the difference between two frames of face-images as input, and attempt to estimate the PPG signal at that instance. The face image will be generated through segmentation using Haar Cascades, just as in our first approach. While the precise architecture has not been determined, similar studies have used upwards of 10 convolutional layers and 5 pooling layers [2].
 
-
+<!--Source of this table http://www.es.ele.tue.nl/~sander/publications/tbme16-algorithmic-rppg.pdf-->
 <br><br>
 <!-- Results -->
 <h3>Experiments</h3>
+    We will be able to compare our methods to other popular methods of RPPG(Remote Photoplethysmography) as seen in the table below.<br>
+    In this table, the values listed in each cell is the Signal-to-Noise-Ratio (SNR).<br>
+    <table>
+        <tr>
+            <th>Category</th>
+            <th>Challenge</th>
+            <th>G(2007)</th>
+            <th>G(2008)</th>
+            <th>PCA(2011)</th>
+            <th>ICA(2011)</th>
+            <th>CHROM(2013)</th>
+            <th>PBV(2014)</th>
+            <th>2SR(2014)</th>
+            <th>Spectral Method</th>
+            <th>Nueral Network</th>
+        </tr>
+        <tr>
+            <td rowspan="3">Skin Type</td>
+            <td>Type I-II</td>
+            <td>2.67</td>
+            <td>7.55</td>
+            <td>5.85</td>
+            <td>6.51</td>
+            <td>6.47</td>
+            <td>5.57</td>
+            <td>7.44</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            
+            <td>Type III</td>
+            <td>2.07</td>
+            <td>7.89</td>
+            <td>5.38</td>
+            <td>6.61</td>
+            <td>6.21</td>
+            <td>6.26</td>
+            <td>7.90</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td>Type IV-V</td>
+            <td>-0.49</td>
+            <td>6.40</td>
+            <td>2.25</td>
+            <td>4.56</td>
+            <td>5.43</td>
+            <td>4.04</td>
+            <td>6.60</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td rowspan="3">Luminance</td>
+            <td>Stationary</td>
+            <td>8.10</td>
+            <td>10.14</td>
+            <td>8.70</td>
+            <td>11.61</td>
+            <td>9.42</td>
+            <td>6.57</td>
+            <td>10.53</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td>Rotation</td>
+            <td>0.81</td>
+            <td>3.34</td>
+            <td>1.46</td>
+            <td>4.04</td>
+            <td>3.63</td>
+            <td>6.36</td>
+            <td>6.16</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td>Talking</td>
+            <td>-0.62</td>
+            <td>3.75</td>
+            <td>0.46</td>
+            <td>3.11</td>
+            <td>3.99</td>
+            <td>4.01</td>
+            <td>5.33</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td rowspan="3">Recovery</td>
+            <td>Low</td>
+            <td>-3.07</td>
+            <td>4.67</td>
+            <td>-0.60</td>
+            <td>1.78</td>
+            <td>2.66</td>
+            <td>1.95</td>
+            <td>4.93</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td>Medium</td>
+            <td>-3.19</td>
+            <td>4.97</td>
+            <td>-0.79</td>
+            <td>1.65</td>
+            <td>3.62</td>
+            <td>3.15</td>
+            <td>5.26</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td>High</td>
+            <td>-8.19</td>
+            <td>4.11</td>
+            <td>-6.51</td>
+            <td>-0.82</td>
+            <td>3.52</td>
+            <td>3.52</td>
+            <td>4.84</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td rowspan="2">Skin Type</td>
+            <td>Biking</td>
+            <td>-6.39</td>
+            <td>-3.38</td>
+            <td>-4.21</td>
+            <td>-5.50</td>
+            <td>0.68</td>
+            <td>0.57</td>
+            <td>-0.28</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td>Stepping</td>
+            <td>-12.59</td>
+            <td>-9.06</td>
+            <td>-11.41</td>
+            <td>-12.51</td>
+            <td>-3.13</td>
+            <td>-2.85</td>
+            <td>-4.50</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+        <tr>
+            <td>Overall</td>
+            <td>Average</td>
+            <td>-1.90</td>
+            <td>3.67</td>
+            <td>0.05</td>
+            <td>1.92</td>
+            <td>3.86</td>
+            <td>3.56</td>
+            <td>4.93</td>
+            <td>TBD</td>
+            <td>TBD</td>
+        </tr>
+    </table>
 <h4>Data Sets</h4>
 <a href="https://mahnob-db.eu/hci-tagging/">HCI tagging database</a>: This database is videos and images of 30 test subjects' biometric reactions to stimuli. This dataset includes images and biometric data for these subjects.<br>
 <a href="https://osf.io/fdrbh/wiki/home/">OSF rPPG</a>: This dataset covers provide RGB images and videos that are tagged with the foreground and background of the image as well as the biometrics of the people in the image.<br>
