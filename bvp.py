@@ -1,3 +1,5 @@
+#!/usr/bin/env
+
 # Remote plehtysysmosngraphy
 # David Haas, Hogan Pope, Spencer Mullinix
 
@@ -45,6 +47,7 @@ class BVPExtractor:
             if draw:
                 cv2.imshow('Press Q to quit', frame)
                 if cv2.waitKey(int(1)) & 0xFF == ord('q'):
+                    print("Quitting")
                     exit()
             
         video_stream.release()
@@ -92,7 +95,7 @@ class BVPExtractor:
         detrended = np.zeros((K, channels.shape[1]))
         for idx in range(channels.shape[1]):  # iterates thru each channel (b,g,r)
             #TODO I'm not sure if Poh et al used the difference array as z, like 
-            # the did in the detrending paper
+            # the did in the detrending paper... i dont think they do
             z = channels[:K,idx]
             # z = channels[1:,idx] - channels[:-1, idx]  # create the interval 
 
@@ -145,6 +148,7 @@ class BVPExtractor:
         averaged = movingAverageFilter(bvp_signal,5)
 
         bp = bandpassFilter(averaged)
+        np.save('filtered_bvp.npy', bp)
         plt.title("Bandpass filtered BVP signal")
         plt.plot(bp)
         plt.show()
