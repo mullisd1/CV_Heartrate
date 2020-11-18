@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 import dlib
 import imutils
+import heartpy
 
 
 # utilities
@@ -20,6 +21,8 @@ from tqdm import tqdm, trange
 import matplotlib.pyplot as plt
 import glob
 import re
+import os
+import pickle
 
 # custom code
 from filteringData import movingAverageFilter, bandpassFilter
@@ -30,17 +33,28 @@ class BVPExtractor:
         self.predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
         self.face_cascade = cv2.CascadeClassifier(
             'haarcascade_frontalface_default.xml')
+        self.freq_cutoff = [0.7, 4]
 
     def parse_for_fs(self, session_folder):
         text = open(session_folder + "session.xml").read()
         return float(re.search(r'vidRate="(\S+)"', text).group(1))
 
+    
+    def get_video(self, path):
+        if os.path.isdir(path):
+            path = glob.glob(f"{path}*.avi")[0]
+        return cv2.VideoCapture(path)
 
-    def sample_video(self, session_folder, draw=False):
-        def get_video(folder_path): return glob.glob(f"{folder_path}*.avi")[0]
+
+
+    def sample_video(self, video_path, draw=False):
+        if os.path.isdir(video_path):
+            video_path = glob.glob(f"{video_path}*.avi")[0]
         
-        video_stream = cv2.VideoCapture(get_video(session_folder))
-        fs = self.parse_for_fs(session_folder)
+        video_stream = cv2.VideoCapture(video_path)
+        fs = video_stream.get(cv2.CAP_PROP_FPS)
+        print(fs)
+
         nframes = int(video_stream.get(cv2.CAP_PROP_FRAME_COUNT))
 
         Y = np.zeros((nframes,3))  # Holds the data for b,g,r channels
@@ -159,11 +173,7 @@ class BVPExtractor:
 
         detrended = np.zeros((K, channels.shape[1]))
         for idx in range(channels.shape[1]):  # iterates thru each channel (b,g,r)
-            #TODO I'm not sure if Poh et al used the difference array as z, like 
-            # the did in the detrending paper... i dont think they do
             z = channels[:K,idx]
-            # z = channels[1:,idx] - channels[:-1, idx]  # create the interval 
-
             term = scipy.sparse.csc_matrix(I + λ**2 * D2.T * D2)
             z_stationary = (I - scipy.sparse.linalg.inv(term)) * z
             detrended[:, idx] = z_stationary
@@ -185,38 +195,48 @@ class BVPExtractor:
         best_component = None
         for i in range(components.shape[1]):
             x = components[:,i]
+            x = bandpassFilter(x, fs, self.freq_cutoff)  # McDuff et al.
             f, psd = scipy.signal.periodogram(x, fs)
             if max(psd) > largest_psd_peak:
                 largest_psd_peak = max(psd)
-                best_component = x
-            
+                best_component = components[:,i]
             
         return best_component
 
 
     def get_BVP_signal(self, video_path, draw=False):
         Y, fs = self.sample_video(video_path, draw=draw)  # Get color samples from video
-        # Y, fs = np.load('channel_data.npy'), 60.9708 
+        pickle.dump({'data': Y, 'fs': fs}, open('channel_data.pkl', 'wb'))
+        # Y, fs = np.load('channel_data.npy'), 29.97
         
         detrended_data = self.detrend_traces(Y)
         cleaned_data = self.z_normalize(detrended_data)
-        np.save('detrended_signals.npy', detrended_data)
+
         source_signals = self.ica_decomposition(cleaned_data)
-        np.save('ica_signals.npy', source_signals)
+
         bvp_signal = self.select_component(source_signals, fs)
 
-        return bvp_signal
+        pickle.dump({'data': bvp_signal, 'fs': fs}, open('bvp_signal.pkl', 'wb'))
+
+        return bvp_signal, fs
 
 
-    def find_heartrate(self, bvp_signal):
+    def find_heartrate(self, bvp_signal, fs):
         # 1st paragraph of sec 3c from Poe et al.
-        averaged = movingAverageFilter(bvp_signal,5)
+        averaged = movingAverageFilter(bvp_signal, 5)
 
-        bp = bandpassFilter(averaged)
-        np.save('filtered_bvp.npy', bp)
+        bp = bandpassFilter(averaged, fs, self.freq_cutoff)
+
+        pickle.dump({'data': bp, 'fs': fs}, open('filtered_bvp.pkl', 'wb'))
+        working_data, measures = heartpy.process(bp, fs)
+        print(measures)
+
         plt.title("Bandpass filtered BVP signal")
         plt.plot(bp)
         plt.show()
+
+        return measures
+
 
 def plot_figures():
     # load in data
@@ -265,7 +285,7 @@ def plot_figures():
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--source', '-s', action="store", type=str)
+    parser.add_argument('--source', '-s', action="store", type=str, default='Sessions/1/')
     parser.add_argument('--draw', '-d', action="store_true", default=False)
     parser.add_argument('--plot', '-p', help="Plot figures from code", action="store_true", default=False)
     parser.add_argument('--hr', help="Calculate heart rate from bvp signal", action="store_true", default=False)
@@ -277,11 +297,12 @@ def main():
         print("plotting figures...")
         plot_figures()
     elif args.hr:
-        hr = exctractor.find_heartrate(np.load('bvp_signal.npy'))
+        bvp_data = pickle.load('bvp_signal.pkl', 'rb')
+        hr = exctractor.find_heartrate(bvp_data['data'], bvp_data['fs'])
     else:
         print("Running algorithm...")
-        bvp_signal = exctractor.get_BVP_signal('Sessions/1/', draw=args.draw)
-        np.save('bvp_signal.npy', bvp_signal)
+        bvp_signal, fs = exctractor.get_BVP_signal(args.source, draw=args.draw)
+        exctractor.find_heartrate(bvp_signal, fs)
 
 
 if __name__ == "__main__":
