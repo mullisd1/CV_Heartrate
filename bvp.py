@@ -11,6 +11,8 @@ import scipy.signal
 from sklearn.decomposition import FastICA
 import cv2
 import numpy as np
+import dlib
+import imutils
 
 
 # utilities
@@ -24,6 +26,8 @@ from filteringData import movingAverageFilter, bandpassFilter
 
 class BVPExtractor:
     def __init__(self):
+        self.detector = dlib.get_frontal_face_detector()
+        self.predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
         self.face_cascade = cv2.CascadeClassifier(
             'haarcascade_frontalface_default.xml')
 
@@ -54,28 +58,89 @@ class BVPExtractor:
         cv2.destroyAllWindows()
         
         return Y, fs
+    
+    def point_inside_polygon(self,x,y,poly):
+        n = len(poly)
+        inside = False
+        p2x = 0.0
+        p2y = 0.0
+        xints = 0.0
+        p1x,p1y = poly[0]
+        for i in range(n+1):
+            p2x,p2y = poly[i % n]
+            if y > min(p1y,p2y):
+                if y <= max(p1y,p2y):
+                    if x <= max(p1x,p2x):
+                        if p1y != p2y:
+                            xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                        if p1x == p2x or x <= xints:
+                            inside = not inside
+            p1x,p1y = p2x,p2y
 
+        return inside
 
-    def get_face_sample(self, image, draw=False, bbox_shrink=0.6):
-        # Detect the faces
-        faces = self.face_cascade.detectMultiScale(image, 1.1, 4)
-        if faces is None:
+    def get_face_sample(self, image, draw=False, bbox_shrink=0.4):
+        rects = self.detector(image, 1)
+
+        if rects is None:
             print('No face detected')
             return False
 
-        # Get bounding box
-        x, y, w, h = faces[0]
+        #Get the facial landmarks
+        shape = self.predictor(image, rects[0])
 
+        #Get the coords of the facial landmarks we care about
+
+        #left cheek
+        x = shape.part(0).x
+        y = shape.part(0).y
+        w = shape.part(50).x - x
+        h = shape.part(50).y - y
+        
+        
         # Shrink bounding box to get only face skin
-        x1,y1 = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
-        x2,y2 = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
+        x1l,y1l = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
+        x2l,y2l = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
+
+        #right cheek
+        x = shape.part(16).x
+        y = shape.part(16).y
+        w = shape.part(52).x - x
+        h = shape.part(52).y - y
+        
+        x1r,y1r = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
+        x2r,y2r = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
         
         # Extract and filter bounding box data to one measurement per channel
-        roi = image[y1:y2,x1:x2,:]
-        channel_averages = np.mean(roi, axis=(0,1))  # mean of each channel
+
+        totals = [0, 0, 0]
+        totalCnt = 0
+        for i in range(y1l, y2l):
+            for j in range(x1l, x2l):
+                totals[0] += image[i][j][0]
+                totals[1] += image[i][j][1]
+                totals[2] += image[i][j][2]
+                totalCnt += 1
+        
+        for i in range(y1r, y2r):
+            for j in range(x1r, x2r):
+                totals[0] += image[i][j][0]
+                totals[1] += image[i][j][1]
+                totals[2] += image[i][j][2]
+                totalCnt += 1
+
+
+        
+        channel_averages = [totals[0]/totalCnt, totals[1]/totalCnt, totals[2]/totalCnt]
+        #roi = image[y1:y2][x1:x2][:]
+        #print(y1, y2, ";", x1,x2)
+        #channel_averages = np.mean(roi, axis=(0,1))  # mean of each channel
+        
+        
 
         if draw:
-            cv2.rectangle(image, (x1,y1), (x2,y2), (0, 0, 255), 2)
+            cv2.rectangle(image, (x1l,y1l), (x2l,y2l), (0, 0, 255), 2)
+            cv2.rectangle(image, (x1r,y1r), (x2r,y2r), (0, 0, 255), 2)
             cv2.putText(image, f'blue signal: {round(channel_averages[0],2)}',
                 (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
             cv2.putText(image, f'green signal: {round(channel_averages[1],2)}',
