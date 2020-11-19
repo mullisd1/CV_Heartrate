@@ -31,7 +31,7 @@ class BVPExtractor:
     def __init__(self):
         self.face_cascade = cv2.CascadeClassifier(
             'haarcascade_frontalface_default.xml')
-        self.freq_cutoff = [0.7, 4]
+        self.freq_cutoff = [0.3, 1.7]
         self.coords = None
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
@@ -167,20 +167,20 @@ class BVPExtractor:
         return signals
 
 
-    def detrend_traces(self, channels, λ=10):
-        return scipy.signal.detrend(channels)
-        # K = channels.shape[0] - 1
-        # I = scipy.sparse.eye(K)
-        # D2 = scipy.sparse.spdiags((np.ones((K,1)) * [1,-2,1]).T ,[0,1,2], K-2, K)
+    def detrend_traces(self, channels, λ=300):
+        #return scipy.signal.detrend(channels)
+        K = channels.shape[0] - 1
+        I = scipy.sparse.eye(K)
+        D2 = scipy.sparse.spdiags((np.ones((K,1)) * [1,-2,1]).T ,[0,1,2], K-2, K)
 
-        # detrended = np.zeros((K, channels.shape[1]))
-        # for idx in range(channels.shape[1]):  # iterates thru each channel (b,g,r)
-        #     z = channels[:K,idx]
-        #     term = scipy.sparse.csc_matrix(I + λ**2 * D2.T * D2)
-        #     z_stationary = (I - scipy.sparse.linalg.inv(term)) * z
-        #     detrended[:, idx] = z_stationary
+        detrended = np.zeros((K, channels.shape[1]))
+        for idx in range(channels.shape[1]):  # iterates thru each channel (b,g,r)
+            z = channels[:K,idx]
+            term = scipy.sparse.csc_matrix(I + λ**2 * D2.T * D2)
+            z_stationary = (I - scipy.sparse.linalg.inv(term)) * z
+            detrended[:, idx] = z_stationary
 
-        # return detrended
+        return detrended
 
 
     def z_normalize(self, data):
@@ -235,7 +235,7 @@ class BVPExtractor:
 
     def find_heartrate(self, bvp_signal, fs):
         # 1st paragraph of sec 3c from Poe et al.
-        averaged = movingAverageFilter(bvp_signal, 5)
+        averaged = movingAverageFilter(bvp_signal, 10)
 
         bp = bandpassFilter(averaged, fs, self.freq_cutoff)
 
