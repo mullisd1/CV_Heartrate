@@ -28,24 +28,22 @@ import pickle
 from filteringData import movingAverageFilter, bandpassFilter
 
 class BVPExtractor:
-    def __init__(self):
+    def __init__(self, smoothing, avg_window=5, freq_cutoff=[0.7,3]):
         self.face_cascade = cv2.CascadeClassifier(
             'haarcascade_frontalface_default.xml')
-        self.freq_cutoff = [0.7, 4]
         self.coords = None
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-    def parse_for_fs(self, session_folder):
-        text = open(session_folder + "session.xml").read()
-        return float(re.search(r'vidRate="(\S+)"', text).group(1))
-
+        self.smoothing = smoothing
+        self.avg_window_size = avg_window
+        self.freq_cutoff = freq_cutoff
+        
     
     def get_video(self, path):
         if os.path.isdir(path):
             path = glob.glob(f"{path}*.avi")[0]
         return cv2.VideoCapture(path)
-
 
 
     def sample_video(self, video_path, draw=False):
@@ -149,6 +147,7 @@ class BVPExtractor:
 
         return channel_averages
 
+
     def remove_outliers(self, signals, num_stds=1):
         for idx in range(signals.shape[1]):
             x = signals[:, idx]
@@ -167,20 +166,21 @@ class BVPExtractor:
         return signals
 
 
-    def detrend_traces(self, channels, λ=10):
-        return scipy.signal.detrend(channels)
-        # K = channels.shape[0] - 1
-        # I = scipy.sparse.eye(K)
-        # D2 = scipy.sparse.spdiags((np.ones((K,1)) * [1,-2,1]).T ,[0,1,2], K-2, K)
+    def detrend_traces(self, channels):
+        λ = self.smoothing
 
-        # detrended = np.zeros((K, channels.shape[1]))
-        # for idx in range(channels.shape[1]):  # iterates thru each channel (b,g,r)
-        #     z = channels[:K,idx]
-        #     term = scipy.sparse.csc_matrix(I + λ**2 * D2.T * D2)
-        #     z_stationary = (I - scipy.sparse.linalg.inv(term)) * z
-        #     detrended[:, idx] = z_stationary
+        K = channels.shape[0] - 1
+        I = scipy.sparse.eye(K)
+        D2 = scipy.sparse.spdiags((np.ones((K,1)) * [1,-2,1]).T ,[0,1,2], K-2, K)
 
-        # return detrended
+        detrended = np.zeros((K, channels.shape[1]))
+        for idx in range(channels.shape[1]):  # iterates thru each channel (b,g,r)
+            z = channels[:K,idx]
+            term = scipy.sparse.csc_matrix(I + λ**2 * D2.T * D2)
+            z_stationary = (I - scipy.sparse.linalg.inv(term)) * z
+            detrended[:, idx] = z_stationary
+
+        return detrended
 
 
     def z_normalize(self, data):
@@ -235,7 +235,7 @@ class BVPExtractor:
 
     def find_heartrate(self, bvp_signal, fs):
         # 1st paragraph of sec 3c from Poe et al.
-        averaged = movingAverageFilter(bvp_signal, 5)
+        averaged = movingAverageFilter(bvp_signal, self.avg_window_size)
 
         bp = bandpassFilter(averaged, fs, self.freq_cutoff)
 
@@ -314,7 +314,7 @@ def main():
     parser.add_argument('--hr', help="Calculate heart rate from bvp signal", action="store_true", default=False)
     args = parser.parse_args()
 
-    exctractor = BVPExtractor()
+    exctractor = BVPExtractor(300, 5, [0.7, 3])
 
     if args.plot:
         print("plotting figures...")
