@@ -52,7 +52,7 @@ class BVPExtractor:
         
         video_stream = cv2.VideoCapture(video_path)
         fs = video_stream.get(cv2.CAP_PROP_FPS)
-        print(fs)
+        print(f'Sampling rate: {fs:.2f} Hz')
 
         nframes = int(video_stream.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -99,18 +99,8 @@ class BVPExtractor:
         x2l,y2l = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
         
         self.coords = [x1l, y1l, x2l, y2l]
-
-        #right cheek
-        #x = shape.part(16).x
-        #y = shape.part(16).y
-        #w = shape.part(52).x - x
-        #h = shape.part(52).y - y
-        
-        #x1r,y1r = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
-        #x2r,y2r = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
         
         # Extract and filter bounding box data to one measurement per channel
-
         totals = [0, 0, 0]
         totalCnt = 0
         for i in range(self.coords[1], self.coords[3]):
@@ -118,21 +108,10 @@ class BVPExtractor:
                 totals[0] += image[i][j][0]
                 totals[1] += image[i][j][1]
                 totals[2] += image[i][j][2]
-                totalCnt += 1
-        
-        #for i in range(y1r, y2r):
-        #    for j in range(x1r, x2r):
-        #        totals[0] += image[i][j][0]
-        #        totals[1] += image[i][j][1]
-        #        totals[2] += image[i][j][2]
-        #        totalCnt += 1
-        
+                totalCnt += 1   
+
         channel_averages = [totals[0]/totalCnt, totals[1]/totalCnt, totals[2]/totalCnt]
-        #roi = image[y1:y2][x1:x2][:]
-        #print(y1, y2, ";", x1,x2)
-        #channel_averages = np.mean(roi, axis=(0,1))  # mean of each channel
-        
-        
+
 
         if draw:
             cv2.rectangle(image, (self.coords[0],self.coords[1]), (self.coords[2],self.coords[3]), (0, 0, 255), 2)
@@ -177,24 +156,6 @@ class BVPExtractor:
 
 
         return channel_averages
-    
-
-    def remove_outliers(self, signals, num_stds=1):
-        for idx in range(signals.shape[1]):
-            x = signals[:, idx]
-            k = 2
-            winsize = 20 # samples
-            for i, num in enumerate(x):
-                l_window = x[max(i-winsize,0) : i]
-                r_window = x[i+1 : min(i+winsize,len(x))]
-                neighbors = np.hstack((l_window, r_window))
-                mu, sig = neighbors.mean(), neighbors.std()
-                upper_bound = mu + k*sig
-                lower_bound = mu - k*sig
-                if num > upper_bound or num < lower_bound:
-                    x[i] = mu
-
-        return signals
 
 
     def detrend_traces(self, channels):
@@ -249,7 +210,7 @@ class BVPExtractor:
         
             pickle.dump({'data': Y, 'fs': fs}, open('channel_data.pkl', 'wb'))
         
-        Y = self.remove_outliers(Y)
+        # Y = self.remove_outliers(Y)
         detrended_data = self.detrend_traces(Y)
         pickle.dump(detrended_data, open('detrended_signals.pkl', 'wb'))
 
@@ -346,11 +307,11 @@ def main():
 
     parser.add_argument('--plot', '-p', help="Plot figures from code", action="store_true", default=False)
     parser.add_argument('--hr', help="Calculate heart rate from bvp signal", action="store_true", default=False)
-    parser.add_argument('--extract', '-e', help="Extract channel data from multiple videos", action="store", type=str)
+    parser.add_argument('--extract', '-e', help="Extract channel data from multiple videos", action="append", nargs="+")
 
     parser.add_argument('--smooth', action='store', type=float, default=300, help="Smoothing parameter for detrending")
     parser.add_argument('--avg', '-a', action='store', type=float, default=5, help="Window size for average filter")
-    parser.add_argument('--cutoff', '-c', action='append', nargs=2, default=[0.7,3], help="Lower and upper bandpass frequencies")
+    parser.add_argument('--cutoff', '-c', action='store', nargs=2, default=[0.7,3], help="Lower and upper bandpass frequencies", type=float)
     args = parser.parse_args()
 
     print(args.cutoff)
@@ -363,13 +324,13 @@ def main():
         bvp_data = pickle.load(open('bvp_signal.pkl', 'rb'))
         hr = exctractor.find_heartrate(bvp_data['data'], bvp_data['fs'])
     elif args.extract:
-        output_folder = 'channel_data'
-        for video_path in glob.glob(args.extract + '*'):
-            print(video_path)
-            filename = video_path[video_path.rfind('\\')+1:]
-            print(filename)
+        for video_path in args.extract:
+            filename = video_path[video_path.rfind('/')+1:video_path.rfind('.')]
+            output_path = os.path.join('channel_data', filename + '_channels.pkl')
+            print(f'Processing {filename} --> {output_path}')
+
             Y, fs = exctractor.sample_video(video_path)
-            pickle.dump({'data': Y, 'fs': fs}, open(f'{output_folder}\{filename}channels.pkl', 'wb'))
+            pickle.dump({'data': Y, 'fs': fs}, open(output_path, 'wb'))
 
     else:
         print("Running algorithm...")
