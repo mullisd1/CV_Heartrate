@@ -33,6 +33,8 @@ class BVPExtractor:
             'haarcascade_frontalface_default.xml')
         self.freq_cutoff = [0.7, 4]
         self.coords = None
+        self.detector = dlib.get_frontal_face_detector()
+        self.predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
     def parse_for_fs(self, session_folder):
         text = open(session_folder + "session.xml").read()
