@@ -34,6 +34,7 @@ class BVPExtractor:
         self.face_cascade = cv2.CascadeClassifier(
             'haarcascade_frontalface_default.xml')
         self.freq_cutoff = [0.7, 4]
+        self.coords = None
 
     def parse_for_fs(self, session_folder):
         text = open(session_folder + "session.xml").read()
@@ -72,51 +73,34 @@ class BVPExtractor:
         cv2.destroyAllWindows()
         
         return Y, fs
-    
-    def point_inside_polygon(self,x,y,poly):
-        n = len(poly)
-        inside = False
-        p2x = 0.0
-        p2y = 0.0
-        xints = 0.0
-        p1x,p1y = poly[0]
-        for i in range(n+1):
-            p2x,p2y = poly[i % n]
-            if y > min(p1y,p2y):
-                if y <= max(p1y,p2y):
-                    if x <= max(p1x,p2x):
-                        if p1y != p2y:
-                            xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
-                        if p1x == p2x or x <= xints:
-                            inside = not inside
-            p1x,p1y = p2x,p2y
-
-        return inside
 
     def get_face_sample(self, image, draw=False, bbox_shrink=0.4):
-        rects = self.detector(image, 1)
+        if(self.coords == None):
+            rects = self.detector(image, 1)
 
-        if rects is None:
-            print('No face detected')
-            return False
+            if rects is None:
+                print('No face detected')
+                return False
 
-        #Get the facial landmarks
-        shape = self.predictor(image, rects[0])
+            #Get the facial landmarks
+            shape = self.predictor(image, rects[0])
 
-        #Get the coords of the facial landmarks we care about
+            #Get the coords of the facial landmarks we care about
 
-        #left cheek - 0 - 50
-        
-        #Main face
-        x = shape.part(1).x
-        y = shape.part(1).y
-        w = shape.part(13).x - x
-        h = shape.part(13).y - y
-        
-        
-        # Shrink bounding box to get only face skin
-        x1l,y1l = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
-        x2l,y2l = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
+            #left cheek - 0 - 50
+            
+            #Main face
+            x = shape.part(1).x
+            y = shape.part(1).y
+            w = shape.part(13).x - x
+            h = shape.part(13).y - y
+            
+            
+            # Shrink bounding box to get only face skin
+            x1l,y1l = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
+            x2l,y2l = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
+            
+            self.coords = [x1l, y1l, x2l, y2l]
 
         #right cheek
         #x = shape.part(16).x
@@ -131,8 +115,8 @@ class BVPExtractor:
 
         totals = [0, 0, 0]
         totalCnt = 0
-        for i in range(y1l, y2l):
-            for j in range(x1l, x2l):
+        for i in range(self.coords[1], self.coords[3]):
+            for j in range(self.coords[0], self.coords[2]):
                 totals[0] += image[i][j][0]
                 totals[1] += image[i][j][1]
                 totals[2] += image[i][j][2]
@@ -144,8 +128,6 @@ class BVPExtractor:
         #        totals[1] += image[i][j][1]
         #        totals[2] += image[i][j][2]
         #        totalCnt += 1
-
-
         
         channel_averages = [totals[0]/totalCnt, totals[1]/totalCnt, totals[2]/totalCnt]
         #roi = image[y1:y2][x1:x2][:]
@@ -155,7 +137,7 @@ class BVPExtractor:
         
 
         if draw:
-            cv2.rectangle(image, (x1l,y1l), (x2l,y2l), (0, 0, 255), 2)
+            cv2.rectangle(image, (self.coords[0],self.coords[1]), (self.coords[2],self.coords[3]), (0, 0, 255), 2)
             #cv2.rectangle(image, (x1r,y1r), (x2r,y2r), (0, 0, 255), 2)
             cv2.putText(image, f'blue signal: {round(channel_averages[0],2)}',
                 (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
@@ -197,6 +179,8 @@ class BVPExtractor:
         best_component = None
         for i in range(components.shape[1]):
             x = components[:,i]
+            print(fs)
+            print(self.freq_cutoff)
             x = bandpassFilter(x, fs, self.freq_cutoff)  # McDuff et al.
             f, psd = scipy.signal.periodogram(x, fs)
             if max(psd) > largest_psd_peak:
