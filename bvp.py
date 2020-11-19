@@ -168,7 +168,6 @@ class BVPExtractor:
 
     def detrend_traces(self, channels):
         λ = self.smoothing
-
         K = channels.shape[0] - 1
         I = scipy.sparse.eye(K)
         D2 = scipy.sparse.spdiags((np.ones((K,1)) * [1,-2,1]).T ,[0,1,2], K-2, K)
