@@ -148,6 +148,37 @@ class BVPExtractor:
         return channel_averages
 
 
+    def haar_face_sample(self, image, draw=False, bbox_shrink=0.6):
+        # Detect the faces
+        faces = self.face_cascade.detectMultiScale(image, 1.1, 4)
+        if faces is None:
+            print('No face detected')
+            return False
+
+        # Get bounding box
+        x, y, w, h = faces[0]
+
+        # Shrink bounding box to get only face skin
+        x1,y1 = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
+        x2,y2 = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
+        
+        # Extract and filter bounding box data to one measurement per channel
+        roi = image[y1:y2,x1:x2,:]
+        channel_averages = np.mean(roi, axis=(0,1))  # mean of each channel
+
+        if draw:
+            cv2.rectangle(image, (x1,y1), (x2,y2), (0, 0, 255), 2)
+            cv2.putText(image, f'blue signal: {round(channel_averages[0],2)}',
+                (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
+            cv2.putText(image, f'green signal: {round(channel_averages[1],2)}',
+                (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+            cv2.putText(image, f'red signal: {round(channel_averages[2],2)}',
+                (10, 130), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
+
+
+        return channel_averages
+    
+
     def remove_outliers(self, signals, num_stds=1):
         for idx in range(signals.shape[1]):
             x = signals[:, idx]
