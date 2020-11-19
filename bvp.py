@@ -105,11 +105,13 @@ class BVPExtractor:
 
         #Get the coords of the facial landmarks we care about
 
-        #left cheek
-        x = shape.part(0).x
-        y = shape.part(0).y
-        w = shape.part(50).x - x
-        h = shape.part(50).y - y
+        #left cheek - 0 - 50
+        
+        #Main face
+        x = shape.part(1).x
+        y = shape.part(1).y
+        w = shape.part(13).x - x
+        h = shape.part(13).y - y
         
         
         # Shrink bounding box to get only face skin
@@ -117,13 +119,13 @@ class BVPExtractor:
         x2l,y2l = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
 
         #right cheek
-        x = shape.part(16).x
-        y = shape.part(16).y
-        w = shape.part(52).x - x
-        h = shape.part(52).y - y
+        #x = shape.part(16).x
+        #y = shape.part(16).y
+        #w = shape.part(52).x - x
+        #h = shape.part(52).y - y
         
-        x1r,y1r = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
-        x2r,y2r = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
+        #x1r,y1r = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
+        #x2r,y2r = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
         
         # Extract and filter bounding box data to one measurement per channel
 
@@ -136,12 +138,12 @@ class BVPExtractor:
                 totals[2] += image[i][j][2]
                 totalCnt += 1
         
-        for i in range(y1r, y2r):
-            for j in range(x1r, x2r):
-                totals[0] += image[i][j][0]
-                totals[1] += image[i][j][1]
-                totals[2] += image[i][j][2]
-                totalCnt += 1
+        #for i in range(y1r, y2r):
+        #    for j in range(x1r, x2r):
+        #        totals[0] += image[i][j][0]
+        #        totals[1] += image[i][j][1]
+        #        totals[2] += image[i][j][2]
+        #        totalCnt += 1
 
 
         
@@ -154,7 +156,7 @@ class BVPExtractor:
 
         if draw:
             cv2.rectangle(image, (x1l,y1l), (x2l,y2l), (0, 0, 255), 2)
-            cv2.rectangle(image, (x1r,y1r), (x2r,y2r), (0, 0, 255), 2)
+            #cv2.rectangle(image, (x1r,y1r), (x2r,y2r), (0, 0, 255), 2)
             cv2.putText(image, f'blue signal: {round(channel_averages[0],2)}',
                 (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2, cv2.LINE_AA)
             cv2.putText(image, f'green signal: {round(channel_averages[1],2)}',
