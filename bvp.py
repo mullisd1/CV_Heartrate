@@ -72,33 +72,33 @@ class BVPExtractor:
         
         return Y, fs
 
-    def get_face_sample(self, image, draw=False, bbox_shrink=0.4):
-        if(self.coords == None):
-            rects = self.detector(image, 1)
+    def get_face_sample(self, image, draw=False, bbox_shrink=0.5):
+        # if(self.coords == None):
+        rects = self.detector(image, 1)
 
-            if rects is None:
-                print('No face detected')
-                return False
+        if rects is None:
+            print('No face detected')
+            return False
 
-            #Get the facial landmarks
-            shape = self.predictor(image, rects[0])
+        #Get the facial landmarks
+        shape = self.predictor(image, rects[0])
 
-            #Get the coords of the facial landmarks we care about
+        #Get the coords of the facial landmarks we care about
 
-            #left cheek - 0 - 50
-            
-            #Main face
-            x = shape.part(1).x
-            y = shape.part(1).y
-            w = shape.part(13).x - x
-            h = shape.part(13).y - y
-            
-            
-            # Shrink bounding box to get only face skin
-            x1l,y1l = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
-            x2l,y2l = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
-            
-            self.coords = [x1l, y1l, x2l, y2l]
+        #left cheek - 0 - 50
+        
+        #Main face
+        x = shape.part(1).x
+        y = shape.part(1).y
+        w = shape.part(13).x - x
+        h = shape.part(13).y - y
+        
+        
+        # Shrink bounding box to get only face skin
+        x1l,y1l = int(x + w*bbox_shrink/2), int(y + h*bbox_shrink/2)
+        x2l,y2l = int((x + w) - w*bbox_shrink/2), int((y+h) - h*bbox_shrink/2)
+        
+        self.coords = [x1l, y1l, x2l, y2l]
 
         #right cheek
         #x = shape.part(16).x
@@ -215,8 +215,8 @@ class BVPExtractor:
                 Y, fs = stored['data'], stored['fs']
         else:
             Y, fs = self.sample_video(video_path, draw=draw)  # Get color samples from video
-            pickle.dump({'data': Y, 'fs': fs}, open('channel_data.pkl', 'wb'))
         
+            pickle.dump({'data': Y, 'fs': fs}, open('channel_data.pkl', 'wb'))
         
         Y = self.remove_outliers(Y)
         detrended_data = self.detrend_traces(Y)
@@ -312,8 +312,10 @@ def main():
     parser.add_argument('--source', '-s', action="store", type=str, default='Sessions/1/')
     parser.add_argument('--load', '-l', action="store_true", default=False, help="Use the most recent channel data")
     parser.add_argument('--draw', '-d', action="store_true", default=False)
+
     parser.add_argument('--plot', '-p', help="Plot figures from code", action="store_true", default=False)
     parser.add_argument('--hr', help="Calculate heart rate from bvp signal", action="store_true", default=False)
+    parser.add_argument('--extract', '-e', help="Extract channel data from multiple videos", action="store", type=str)
 
     parser.add_argument('--smooth', action='store', type=float, default=300, help="Smoothing parameter for detrending")
     parser.add_argument('--avg', '-a', action='store', type=float, default=5, help="Window size for average filter")
@@ -328,6 +330,14 @@ def main():
     elif args.hr:
         bvp_data = pickle.load(open('bvp_signal.pkl', 'rb'))
         hr = exctractor.find_heartrate(bvp_data['data'], bvp_data['fs'])
+    elif args.extract:
+        output_folder = 'channel_data'
+        for video_path in glob.glob(args.extract + '*'):
+            filename = video_path[video_path.rfind('/')+1:]
+            print(filename)
+            Y, fs = exctractor.sample_video(video_path)
+            pickle.dump({'data': Y, 'fs': fs}, open(f'{output_folder}/{filename}channels.pkl', 'wb'))
+
     else:
         print("Running algorithm...")
         bvp_signal, fs = exctractor.get_BVP_signal(args.source if not args.load else None, draw=args.draw)
