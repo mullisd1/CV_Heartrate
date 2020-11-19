@@ -234,11 +234,11 @@ class BVPExtractor:
 
         pickle.dump({'data': bp, 'fs': fs}, open('filtered_bvp.pkl', 'wb'))
         working_data, measures = heartpy.process(bp, fs)
-        print(measures)
+        #print(measures)
 
-        plt.title("Bandpass filtered BVP signal")
-        plt.plot(bp)
-        plt.show()
+        #plt.title("Bandpass filtered BVP signal")
+        #plt.plot(bp)
+        #plt.show()
 
         return measures
 
