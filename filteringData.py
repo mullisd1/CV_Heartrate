@@ -19,10 +19,11 @@ def movingAverageFilter(data, numPoints, doKeepSameLength=False):
 from scipy import signal
 #Requires a 1-D array input data
 #I don't know how to test if this works correctly
-def bandpassFilter(data):
-    cutOff = [0.7, 4]
+def bandpassFilter(data, fs, cutoff):
+    #cutOff = [0.7, 4]
+    #fs=256
     window='hamming'
-    filt = signal.firwin(128, cutOff, window='hamming', pass_zero=False, scale=False, fs=256)
+    filt = signal.firwin(128, cutOff, window='hamming', pass_zero=False, scale=False, fs=fs)
     return signal.lfilter(filt, 1, data)    
 
 
