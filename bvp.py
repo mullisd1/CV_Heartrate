@@ -197,8 +197,8 @@ class BVPExtractor:
         return best_component
 
 
-    def get_BVP_signal(self, video_path, draw=False, pickle_path=None):
-        if video_path is None:
+    def get_BVP_signal(self, data_path, draw=False, pickle_path=None):
+        if data_path is None:
             if pickle_path is None:
                 stored = pickle.load(open('channel_data.pkl', 'rb'))
                 Y, fs = stored['data'], stored['fs']
@@ -206,7 +206,7 @@ class BVPExtractor:
                 stored = pickle.load(open(pickle_path, 'rb'))
                 Y, fs = stored['data'], stored['fs']
         else:
-            Y, fs = self.sample_video(video_path, draw=draw)  # Get color samples from video
+            Y, fs = self.sample_video(data_path, draw=draw)  # Get color samples from video
         
             pickle.dump({'data': Y, 'fs': fs}, open('channel_data.pkl', 'wb'))
         
@@ -302,11 +302,10 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', '-s', action="store", type=str, default='Sessions/1/')
-    parser.add_argument('--load', '-l', action="store_true", default=False, help="Use the most recent channel data")
+    parser.add_argument('--load', '-l', action="store", default=None, type=str, help="Use the most recent channel data")
     parser.add_argument('--draw', '-d', action="store_true", default=False)
 
     parser.add_argument('--plot', '-p', help="Plot figures from code", action="store_true", default=False)
-    parser.add_argument('--hr', help="Calculate heart rate from bvp signal", action="store_true", default=False)
     parser.add_argument('--extract', '-e', help="Extract channel data from multiple videos", action="append", nargs="+")
 
     parser.add_argument('--smooth', action='store', type=float, default=300, help="Smoothing parameter for detrending")
@@ -320,9 +319,6 @@ def main():
     if args.plot:
         print("plotting figures...")
         plot_figures()
-    elif args.hr:
-        bvp_data = pickle.load(open('bvp_signal.pkl', 'rb'))
-        hr = exctractor.find_heartrate(bvp_data['data'], bvp_data['fs'])
     elif args.extract:
         for video_path in args.extract:
             filename = video_path[video_path.rfind('/')+1:video_path.rfind('.')]
@@ -334,8 +330,9 @@ def main():
 
     else:
         print("Running algorithm...")
-        bvp_signal, fs = exctractor.get_BVP_signal(args.source if not args.load else None, draw=args.draw)
-        exctractor.find_heartrate(bvp_signal, fs)
+        bvp_signal, fs = exctractor.get_BVP_signal(args.source if not args.load else None, args.draw, args.load)
+        phys = exctractor.find_heartrate(bvp_signal, fs)
+        print(phys)
 
 if __name__ == "__main__":
     main()
