@@ -306,7 +306,7 @@ def plot_figures():
 
 
 def main():
-"""
+
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', '-s', action="store", type=str, default='Sessions/1/')
@@ -333,56 +333,16 @@ def main():
     elif args.extract:
         output_folder = 'channel_data'
         for video_path in glob.glob(args.extract + '*'):
-            filename = video_path[video_path.rfind('/')+1:]
+            print(video_path)
+            filename = video_path[video_path.rfind('\\')+1:]
             print(filename)
             Y, fs = exctractor.sample_video(video_path)
-            pickle.dump({'data': Y, 'fs': fs}, open(f'{output_folder}/{filename}channels.pkl', 'wb'))
+            pickle.dump({'data': Y, 'fs': fs}, open(f'{output_folder}\{filename}channels.pkl', 'wb'))
 
     else:
         print("Running algorithm...")
         bvp_signal, fs = exctractor.get_BVP_signal(args.source if not args.load else None, draw=args.draw)
         exctractor.find_heartrate(bvp_signal, fs)
-"""
-    files = ["videos/1_55BPM.pkl", "videos/2_67BPM.pkl", "videos/3_56BPM.pkl", "videos/4_78BPM.pkl", "videos/5_75BPM.pkl", "videos/6_59BPM.pkl", "videos/7_54BPM.pkl"] 
-    correct = [55, 67, 56, 78, 75, 59, 54]
-    step = 0.1
-    
-    #4 parameters we need to check direction of [++++, +++-, ++-+, ++--, +-++, +-+-, +--+, +---, -+++, -++-, -+-+, -+--, --++, --+-, ---+, ----]
-    stepArrangements = [[1,1,1,1], [1,1,1,-1], [1,1,-1,1], [1,1,-1,-1], [1,-1,1,1], [1,-1,1,-1], [1,-1,-1,1], [1,-1,-1,-1], [-1,1,1,1], [-1,1,1,-1], [-1,1,-1,1], [-1,1,-1,-1], [-1,-1,1,1], [-1,-1,1,-1], [-1,-1,-1,1], [-1,-1,-1,-1]
-    
-    #lambda, window, cutLow, cutHigh
-    values = [10, 5, .7, 2]
-    
-    bestSteps = [0, 0, 0, 0]
-    bestError = float('Inf')
-    keepGoing = True
-    while(keepGoing):
-        values[0] += bestSteps[0]
-        values[1] += bestSteps[1]
-        values[2] += bestSteps[2]
-        values[3] += bestSteps[3]
-    
-    
-        keepGoing = False
-        
-        for arrangement in stepArrangements:
-            found = []
-            exctractor = BVPExtractor(values[0] + step*arrangement[0], values[1] + step*arrangement[1], [values[2] + step*arrangement[2], values[3] + step*arrangement[3]])
-            
-            for file in files:
-                found.push(exctractor.get_BVP_signal(None, False, file)['bpm'])
-            tempError = np.sqrt(((found - correct) ** 2).mean())
-            if(tempError < bestError):
-                keepGoing = True
-                bestError = tempError
-                bestSteps = [step*arrangement[0], step*arrangement[1], step*arrangement[2], step*arrangement[3]]
-            
-            
-        #-----
-        
-    print("Values", values)
-    print("Error", bestError)
-    
 
 if __name__ == "__main__":
     main()
