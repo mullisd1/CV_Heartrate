@@ -273,11 +273,11 @@ class BVPExtractor:
 
         pickle.dump({'data': bp, 'fs': fs}, open('filtered_bvp.pkl', 'wb'))
         working_data, measures = heartpy.process(bp, fs)
-        print(measures)
+        #print(measures)
 
-        plt.title("Bandpass filtered BVP signal")
-        plt.plot(bp)
-        plt.show()
+        #plt.title("Bandpass filtered BVP signal")
+        #plt.plot(bp)
+        #plt.show()
 
         return measures
 
@@ -353,6 +353,7 @@ def main():
     parser.add_argument('--cutoff', '-c', action='append', nargs=2, default=[0.7,3], help="Lower and upper bandpass frequencies")
     args = parser.parse_args()
 
+    print(args.cutoff)
     exctractor = BVPExtractor(args.smooth, args.avg, args.cutoff)
 
     if args.plot:
