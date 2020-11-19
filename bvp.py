@@ -236,10 +236,14 @@ class BVPExtractor:
         return best_component
 
 
-    def get_BVP_signal(self, video_path, draw=False):
+    def get_BVP_signal(self, video_path, draw=False, pickle_path=None):
         if video_path is None:
-            stored = pickle.load(open('channel_data.pkl', 'rb'))
-            Y, fs = stored['data'], stored['fs']
+            if pickle_path is None:
+                stored = pickle.load(open('channel_data.pkl', 'rb'))
+                Y, fs = stored['data'], stored['fs']
+            else:
+                stored = pickle.load(open(pickle_path, 'rb'))
+                Y, fs = stored['data'], stored['fs']
         else:
             Y, fs = self.sample_video(video_path, draw=draw)  # Get color samples from video
         
@@ -333,6 +337,7 @@ def plot_figures():
 
 
 def main():
+
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', '-s', action="store", type=str, default='Sessions/1/')
@@ -359,16 +364,16 @@ def main():
     elif args.extract:
         output_folder = 'channel_data'
         for video_path in glob.glob(args.extract + '*'):
-            filename = video_path[video_path.rfind('/')+1:]
+            print(video_path)
+            filename = video_path[video_path.rfind('\\')+1:]
             print(filename)
             Y, fs = exctractor.sample_video(video_path)
-            pickle.dump({'data': Y, 'fs': fs}, open(f'{output_folder}/{filename}channels.pkl', 'wb'))
+            pickle.dump({'data': Y, 'fs': fs}, open(f'{output_folder}\{filename}channels.pkl', 'wb'))
 
     else:
         print("Running algorithm...")
         bvp_signal, fs = exctractor.get_BVP_signal(args.source if not args.load else None, draw=args.draw)
         exctractor.find_heartrate(bvp_signal, fs)
-
 
 if __name__ == "__main__":
     main()
