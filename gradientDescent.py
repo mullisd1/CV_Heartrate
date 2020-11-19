@@ -1,23 +1,30 @@
 from bvp import BVPExtractor
+import numpy as np
 
-files = ["channel_data/1_55BPM.mp4channels.pkl", "channel_data/2_67BPM.mp4channels.pkl", "channel_data/3_56BPM.mp4channels.pkl", "channel_data/4_78BPM.mp4channels.pkl", "channel_data/5_75BPM.mp4channels.pkl", "channel_data/6_59BPM.mp4channels.pkl", "channel_data/7_54BPM.mp4channels.pkl"] 
-correct = [55, 67, 56, 78, 75, 59, 54]
+import warnings
+warnings.simplefilter("ignore")
+ 
+files = ["channel_data/1_55BPM.mp4channels.pkl", "channel_data/2_67BPM.mp4channels.pkl", "channel_data/3_56BPM.mp4channels.pkl", "channel_data/4_78BPM.mp4channels.pkl", "channel_data/6_59BPM.mp4channels.pkl"] 
+correct = [55, 67, 56, 78, 59]
 step = 0.1
 
 #4 parameters we need to check direction of [++++, +++-, ++-+, ++--, +-++, +-+-, +--+, +---, -+++, -++-, -+-+, -+--, --++, --+-, ---+, ----]
 stepArrangements = [[1,1,1,1], [1,1,1,-1], [1,1,-1,1], [1,1,-1,-1], [1,-1,1,1], [1,-1,1,-1], [1,-1,-1,1], [1,-1,-1,-1], [-1,1,1,1], [-1,1,1,-1], [-1,1,-1,1], [-1,1,-1,-1], [-1,-1,1,1], [-1,-1,1,-1], [-1,-1,-1,1], [-1,-1,-1,-1]]
 
 #lambda, window, cutLow, cutHigh
-values = [10, 5, .7, 2]
+values = [299.9, 4.8, .5, 3]
 
 bestSteps = [0, 0, 0, 0]
 bestError = float('Inf')
 keepGoing = True
 while(keepGoing):
+    
     values[0] += bestSteps[0]
     values[1] += bestSteps[1]
     values[2] += bestSteps[2]
     values[3] += bestSteps[3]
+    print(values)
+    print(bestError)
 
     keepGoing = False
     
@@ -27,9 +34,9 @@ while(keepGoing):
         
         for file in files:
             bvp, fs = exctractor.get_BVP_signal(None, False, file)
-            found.push(find_heartrate(bvp, fs)['bpm'])
+            found.append(exctractor.find_heartrate(bvp, fs)['bpm'])
             
-        tempError = np.sqrt(((np.array(found) - np.array(correct)) ** 2).mean())
+        tempError = np.sqrt((np.square(np.array(found) - np.array(correct))).mean())
         if(tempError < bestError):
             keepGoing = True
             bestError = tempError
