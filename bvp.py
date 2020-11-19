@@ -311,7 +311,7 @@ def main():
     parser.add_argument('--hr', help="Calculate heart rate from bvp signal", action="store_true", default=False)
 
     parser.add_argument('--smooth', action='store', type=float, default=300, help="Smoothing parameter for detrending")
-    parser.add_argument('--avg', '-a', action='store', type=float, default=300, help="Window size for average filter")
+    parser.add_argument('--avg', '-a', action='store', type=float, default=5, help="Window size for average filter")
     parser.add_argument('--cutoff', '-c', action='append', nargs=2, default=[0.7,3], help="Lower and upper bandpass frequencies")
     args = parser.parse_args()
 
