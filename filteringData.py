@@ -7,10 +7,15 @@ def movingAverageFilter(data, numPoints, doKeepSameLength=False):
 
         
     buffer = int(numPoints/2)
-    # print(buffer)
-    # print(len(data)-buffer)
+#     print(buffer)
+#     print(len(data)-buffer)
     for i in range(buffer, len(data) - buffer + int(not isMid)):
-        result.append(sum(data[i-buffer: i+buffer+isMid])/numPoints)
+#         print(i)
+#         print(buffer)
+#         print(i-buffer)
+#         print(int(i+buffer+isMid))
+#         print(data[i-buffer: int(i+buffer+isMid)])
+        result.append(sum(data[i-buffer: int(i+buffer+isMid)])/numPoints)
         # print(data[i-buffer: i+buffer+isMid])
 
     return result

@@ -42,13 +42,13 @@ class BVPExtractor:
     
     def get_video(self, path):
         if os.path.isdir(path):
-            path = glob.glob(f"{path}*.avi")[0]
+            path = glob.glob(f"{path}*.mp4")[0]
         return cv2.VideoCapture(path)
 
 
     def sample_video(self, video_path, draw=False):
         if os.path.isdir(video_path):
-            video_path = glob.glob(f"{video_path}*.avi")[0]
+            video_path = glob.glob(f"{video_path}*.mp4")[0]
         
         video_stream = cv2.VideoCapture(video_path)
         fs = video_stream.get(cv2.CAP_PROP_FPS)
@@ -321,12 +321,17 @@ def main():
         plot_figures()
     elif args.extract:
         for video_path in args.extract:
+            video_path = video_path[0]
+            print(video_path)
             filename = video_path[video_path.rfind('/')+1:video_path.rfind('.')]
+            print(filename)
+            filename = str(video_path).split("\\")[-1]
             output_path = os.path.join('channel_data', filename + '_channels.pkl')
             print(f'Processing {filename} --> {output_path}')
 
             Y, fs = exctractor.sample_video(video_path)
-            pickle.dump({'data': Y, 'fs': fs}, open(output_path, 'wb'))
+            with open(output_path, 'wb') as f:
+                pickle.dump({'data': Y, 'fs': fs}, f)
 
     else:
         print("Running algorithm...")
